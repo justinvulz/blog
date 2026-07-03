@@ -1,0 +1,86 @@
+# Tola configuration file (v0.7.1)
+# https://github.com/tola-rs/tola-ssg
+
+# Site metadata for feed generation and Typst templates
+# Access in Typst via `#import "@tola/site:0.0.0": info`
+# For custom fields, use `[site.info.extra]` and access via `info.extra.xxx`
+[site.info]
+title = "Justin's Blog"  # Site title
+author = "Justin"  # Author name
+email = ""  # Author email
+description = ""  # Site description
+# url = ""  # Site URL, path used as prefix (e.g., "https://example.com/blog/docs")
+language = "en"  # Language code (e.g., "en", "zh-Hans")
+copyright = ""  # Copyright notice
+
+# SEO configuration containing feed, sitemap, and OG tag settings
+[site.seo]
+auto_og = false  # Auto-inject OG meta tags (can be overridden in Typst)
+
+# Feed generation settings (RSS/Atom)
+[site.seo.feed]
+enable = false  # Enable feed generation
+path = "feed.xml"  # Output path for feed file
+format = "rss"  # Feed format: rss | atom
+
+# Sitemap generation settings
+[site.seo.sitemap]
+enable = false  # Enable sitemap generation
+path = "sitemap.xml"  # Output path for sitemap file
+
+[site.header]
+# Inject a dummy script to prevent FOUC (Flash of Unstyled Content).
+# The script blocks rendering briefly, giving CSS time to load.
+no_fouc = true
+# Favicon path (relative to site root).
+# icon = ""
+# CSS stylesheet paths (relative to site root).
+styles = []
+# Script entries (relative to site root).
+scripts = []
+# Raw HTML elements to insert into head.
+elements = []
+
+[build.assets]
+# Nested directories (preserve structure).
+# Each directory is copied to `output/{basename}/`.
+# Files inside can be referenced as `/{basename}/path/to/file`.
+# Examples:
+# - `"assets"` -> `/assets/xxx`
+# - `"assets/styles"` -> `/styles/xxx`
+# - `{ dir = "vendor", as = "lib" }` -> `/lib/xxx`
+nested = ["assets"]
+# Flatten files (copy to output root).
+# Each file is copied directly to `output/{basename}`.
+# Examples:
+# - `"assets/CNAME"` -> `/CNAME`
+# - `{ file = "icons/fav.ico", as = "favicon.ico" }` -> `/favicon.ico`
+flatten = []
+
+# CSS processor hook (Only tailwind now)
+[build.hooks.css]
+enable = false  # Enable Tailwind CSS processing
+# Output asset path (also used as Tailwind input file location)
+# path = ""  # e.g. "assets/style/tailwind.css"
+command = ["tailwindcss"]  # e.g. ["npx", "tailwindcss"] if you want
+
+# Development server settings
+[serve]
+# Network interface to bind
+# - `127.0.0.1` (default): localhost only
+# - `0.0.0.0`: all interfaces (LAN accessible)
+interface = "127.0.0.1"
+port = 5277  # HTTP port number
+watch = true  # Enable file watcher for live reload
+# Respect path_prefix from site.url during local development
+# - `false` (default): Ignore prefix, access pages at `/`
+# - `true`: Keep prefix, access at `/my-project/`
+respect_prefix = false
+
+[validate.pages]
+enable = true  # Enable page link validation
+level = "error"  # Failure level: error | warn
+
+[validate.assets]
+enable = true  # Enable asset validation
+level = "error"  # Failure level: error | warn
