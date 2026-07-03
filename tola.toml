@@ -35,7 +35,7 @@ no_fouc = true
 # Favicon path (relative to site root).
 # icon = ""
 # CSS stylesheet paths (relative to site root).
-styles = []
+styles = ["assets/styles/main.css"]
 # Script entries (relative to site root).
 scripts = []
 # Raw HTML elements to insert into head.
@@ -49,7 +49,7 @@ elements = []
 # - `"assets"` -> `/assets/xxx`
 # - `"assets/styles"` -> `/styles/xxx`
 # - `{ dir = "vendor", as = "lib" }` -> `/lib/xxx`
-nested = ["assets"]
+nested = ["assets/styles"]
 # Flatten files (copy to output root).
 # Each file is copied directly to `output/{basename}`.
 # Examples:

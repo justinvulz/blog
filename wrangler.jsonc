@@ -1,0 +1,14 @@
+{
+  // Cloudflare Workers config for serving the static Tola build.
+  // Docs: https://developers.cloudflare.com/workers/static-assets/
+  "name": "blog",
+  "compatibility_date": "2025-09-01",
+
+  // Assets-only Worker: no server code, just serve the built site in ./public.
+  // `tola build` writes here; CI runs it before `wrangler deploy`.
+  "assets": {
+    "directory": "./public",
+    // Serve /404.html on unmatched paths (Tola dir-index files are auto-served).
+    "not_found_handling": "404-page"
+  }
+}
