@@ -1,4 +1,4 @@
-#import "/templates/post.typ": post
+#import "/templates/post.typ": post, img, columns
 
 #let args = (
   title: "Typst Basic Syntax",
@@ -12,6 +12,11 @@
 
 Everything below `#show: post.with(...)` is the *body* of your post,
 written in ordinary Typst markup. Tola renders it straight to HTML.
+
+#columns(
+  img("/images/test.avif"),
+  img("/images/test.avif"),
+)
 
 = A section heading
 
@@ -40,3 +45,6 @@ fn main() {
 Math works too, inline $a^2 + b^2 = c^2$ and as a block:
 
 $ sum_(i=1)^n i = (n (n+1)) / 2 $
+
+= Second section
+#lorem(30)

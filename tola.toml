@@ -49,7 +49,7 @@ elements = []
 # - `"assets"` -> `/assets/xxx`
 # - `"assets/styles"` -> `/styles/xxx`
 # - `{ dir = "vendor", as = "lib" }` -> `/lib/xxx`
-nested = ["assets/styles"]
+nested = ["assets/styles", "assets/images"]
 # Flatten files (copy to output root).
 # Each file is copied directly to `output/{basename}`.
 # Examples:

@@ -2,7 +2,7 @@
 // Used from a content file with:  #show: page.with(title: "...")
 
 #import "/templates/tola.typ": wrap-page
-#import "/templates/base.typ": base, head, shell
+#import "/templates/base.typ": base, head, shell, fmt-date, img, columns
 
 #let page = wrap-page(
   base: base,
@@ -12,5 +12,5 @@
       html.h1[#meta.title]
     }
     body
-  }),
+  })
 )
