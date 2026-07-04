@@ -47,6 +47,14 @@ Standard metadata fields recognized by Tola: `title, summary, date, update, auth
 
 `content/index.typ` → `/`, `content/about.typ` → `/about/`, `content/posts/first.typ` → `/posts/first/`, `content/posts/index.typ` → `/posts/`. Folder-style permalinks with trailing slash.
 
+### Categories (post sub-folders → generated listing pages)
+
+A post's **category** is the folder right after `/posts/`: `content/posts/rust/ownership.typ` → category `rust`. A post directly under `content/posts/` (e.g. `first.typ`) has none. `category-of(permalink)` and `current-category` (in `base.typ`) derive it; `post.typ` shows it as a badge in the meta line.
+
+`/categories/` (`content/categories/index.typ`) lists all categories dynamically. Each `/categories/<cat>/` page is rendered by `templates/category.typ` (`category.with(category:, title:)`) which lists that folder's posts.
+
+Because Tola has no dynamic routes, each `/categories/<cat>/` needs its own content file. **Do not hand-write these** — `scripts/gen-categories.sh` regenerates one stub per post sub-folder and deletes stale ones (idempotent). It runs in `build.sh` on deploy; run it locally after adding/removing a category folder: `bash scripts/gen-categories.sh`. The stubs carry an AUTO-GENERATED banner and are committed so `tola serve` works without regenerating.
+
 ### pages() and the two-phase gotcha
 
 `#import "@tola/pages:0.0.0": pages` lists pages for index/listing pages. It compiles in two phases: during the **scan/filter** phase `pages()` returns `[]` (dynamic content is skipped, then filled in during the compile phase) — this is normal, not a bug. Note dates from `pages()` may come back as **strings**, whereas inside a template `meta.date` is a **datetime**. Use `fmt-date` (in `base.typ`) to print either safely; only call `.display()` on values you know are datetime.
@@ -63,7 +71,7 @@ Standard metadata fields recognized by Tola: `title, summary, date, update, auth
 
 Auto-deploys via **Cloudflare Workers Builds** (native Git integration, not GitHub Actions) on every push to `main`:
 - `wrangler.jsonc` — assets-only Worker serving `./public` (no server code).
-- `build.sh` — the Cloudflare build command: downloads the pinned `tola` release binary and runs `tola build`. Bump `TOLA_VERSION` here (keep in sync with the local `tola --version`).
+- `build.sh` — the Cloudflare build command: downloads the pinned `tola` release binary, runs `scripts/gen-categories.sh`, then `tola build`. Bump `TOLA_VERSION` here (keep in sync with the local `tola --version`).
 - Deploy command is the default `npx wrangler deploy`; Cloudflare runs the build on Ubuntu 24.04 and handles auth.
 
 `public/`, `.tola/` (cache), and a stray `./tola` binary are gitignored — never commit build output.
