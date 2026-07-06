@@ -39,7 +39,12 @@ styles = ["assets/styles/main.css"]
 # Script entries (relative to site root).
 scripts = []
 # Raw HTML elements to insert into head.
+# The charset MUST come first: without it the page renders correctly under
+# `tola serve` (which sends a charset=utf-8 HTTP header) but garbles non-ASCII
+# text (e.g. Traditional Chinese) on Cloudflare, whose asset headers can't be
+# relied on. Declaring it in the HTML fixes it everywhere.
 elements = [
+  '<meta charset="utf-8">',
   '<link rel="preconnect" href="https://fonts.googleapis.com">',
   '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
   '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap">',
