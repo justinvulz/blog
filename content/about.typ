@@ -4,6 +4,7 @@
 #show: page.with(
   title: "About",
   summary: [About Justin and this blog],
+  narrow: true,
 )
 
 這裡是Justin 的部落格。

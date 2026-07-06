@@ -23,13 +23,13 @@
     ]
     let overview = post-overview()
     if overview == none {
-      shell(article)
+      shell(article, content-class: "content post-single")
     } else {
       // Two columns on wide screens: article + sticky side overview.
       shell(html.elem("div", attrs: (class: "post-layout"))[
         #article
         #overview
-      ], wide: true)
+      ], content-class: "content post-wide")
     }
   },
 )

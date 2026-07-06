@@ -11,9 +11,18 @@ A personal blog built with [Tola SSG](https://github.com/tola-rs/tola-ssg) (v0.7
 - `tola serve` — live-reload dev server at http://127.0.0.1:5277 (config in `[serve]` of `tola.toml`).
 - `tola build` — production build into `public/`.
 - `tola build --clean` — wipe `public/` first. Use this after moving/renaming assets, since the asset manifest can go stale and cause misleading `not in any configured asset entry` errors.
+- `nu scripts/new-post.nu "Title"` — scaffold a new post (see "Scaffolding a post" below).
 - There is no test suite or linter. "Correctness" = the build succeeds; link/asset validation runs at build time (see below).
 
 `tola` is installed via the Nix profile locally. The shell is `nu` (Nushell), not bash.
+
+### Scaffolding a post
+
+`scripts/new-post.nu` (a Nushell script) writes a pre-filled post and derives the slug from the title:
+```
+nu scripts/new-post.nu "Understanding Ownership" -c rust -t "rust, memory" -s "A quick tour" --cover /images/foo.avif
+```
+Flags: `-c/--category` (sub-folder under `content/posts/`), `-a/--author` (default `Justin`), `-s/--summary`, `-t/--tags` (comma-separated → Typst tuple), `--cover` (image URL), `-f/--force` (overwrite). Date is set to today. When `--category` names a **new** folder it auto-runs `gen-categories.sh` so the `/categories/<cat>/` page exists. It omits empty `summary`/`cover` fields on purpose: an empty `summary: []` content block breaks the OG-description `<meta>` tag at build time.
 
 ## Architecture
 
@@ -24,11 +33,27 @@ templates/tola.typ   AUTO-GENERATED — do NOT edit. Provides wrap-page, tola-pa
 utils/tola.typ       AUTO-GENERATED — do NOT edit. Provides og-tags, cls, to-string, parse-date, etc.
         │  everything below builds on wrap-page
 templates/base.typ   THE site-wide file. Header/nav/footer (shell), <head> tags (head),
-                     heading show rules (base), nav-links list, fmt-date helper.
-templates/post.typ   Post template  — title + date/author meta + body.
+                     heading show rules (base), nav-links list, fmt-date helper,
+                     and the listing helpers: post-cover, post-card, card-grid.
+templates/post.typ   Post template  — title + date/author/category meta + body.
 templates/page.typ   Plain-page template — title + body (index, about, posts list).
+                     Understands a `narrow: true` flag for readable prose width.
+templates/category.typ  Single-category listing — renders a card-grid of its posts.
 content/**/*.typ     Actual pages. Each applies a template via `#show: <template>.with(...)`.
 ```
+
+### Theme / design
+
+The site uses a dark, warm palette ("nadja.log"-style) in `assets/styles/main.css`, driven
+by CSS custom properties in `:root` — notably `--accent` (currently sage `#7d8a5f`); change
+that one variable to re-tint the whole site. Fonts (**Archivo** + **Space Mono**) load from
+Google Fonts via `[site.header].elements` in `tola.toml`. Listing pages (home, `/posts/`,
+category pages) render posts as a responsive **card grid**; each card shows a cover — the
+post's `cover` image if set, otherwise a deterministic striped placeholder keyed off the
+permalink (`post-cover` in `base.typ`). Covers appear only on cards, **not** at the top of
+the post page. `shell(body, content-class:)` sets the content column width — `content`
+(listings), `content narrow` (prose/about), `content post-single`, `content post-wide`
+(post + sticky "On this page" overview).
 
 `templates/tola.typ` and `utils/tola.typ` carry an "AUTO-GENERATED, avoid modifying" banner because they are regenerated on Tola upgrades — put all customization in `base.typ`/`post.typ`/`page.typ` instead. `wrap-page(base:, head:, view:, transform-meta:)` is the extension point: `base` sets show rules, `head(meta)` builds `<head>` content, `view(body, meta)` wraps the body with layout (this is where `shell(...)` is called).
 
@@ -43,6 +68,12 @@ Body in plain Typst markup...
 ```
 Standard metadata fields recognized by Tola: `title, summary, date, update, author, draft, tags, permalink, aliases`. `draft: true` hides a page from `pages()`.
 
+Custom fields this repo's templates add (forwarded through `wrap-page`'s `..extra`):
+- `cover:` (posts) — image URL like `/images/foo.avif`; used as the card thumbnail.
+- `narrow: true` (plain pages via `page.typ`) — constrains to a readable prose width (e.g. `about.typ`).
+
+Note `summary` is Typst **content** (`[...]`); leave the field out entirely rather than passing an empty `[]`, which breaks the OG-description `<meta>` tag.
+
 ### Filename → URL mapping
 
 `content/index.typ` → `/`, `content/about.typ` → `/about/`, `content/posts/first.typ` → `/posts/first/`, `content/posts/index.typ` → `/posts/`. Folder-style permalinks with trailing slash.
@@ -53,7 +84,7 @@ A post's **category** is the folder right after `/posts/`: `content/posts/rust/o
 
 `/categories/` (`content/categories/index.typ`) lists all categories dynamically. Each `/categories/<cat>/` page is rendered by `templates/category.typ` (`category.with(category:, title:)`) which lists that folder's posts.
 
-Because Tola has no dynamic routes, each `/categories/<cat>/` needs its own content file. **Do not hand-write these** — `scripts/gen-categories.sh` regenerates one stub per post sub-folder and deletes stale ones (idempotent). It runs in `build.sh` on deploy; run it locally after adding/removing a category folder: `bash scripts/gen-categories.sh`. The stubs carry an AUTO-GENERATED banner and are committed so `tola serve` works without regenerating.
+Because Tola has no dynamic routes, each `/categories/<cat>/` needs its own content file. **Do not hand-write these** — `scripts/gen-categories.sh` regenerates one stub per post sub-folder and deletes stale ones (idempotent). It runs in `build.sh` on deploy; run it locally after adding/removing a category folder: `bash scripts/gen-categories.sh` (or just use `scripts/new-post.nu -c <cat>`, which runs it for new folders). The stubs carry an AUTO-GENERATED banner and are committed so `tola serve` works without regenerating.
 
 ### pages() and the two-phase gotcha
 
