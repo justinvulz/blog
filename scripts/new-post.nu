@@ -10,8 +10,8 @@
 #   nu scripts/new-post.nu "Understanding Ownership" --category rust --tags "rust, memory"
 #   nu scripts/new-post.nu "Nix Flakes" -c nixos -s "Reproducible dev shells" --cover /images/flake.avif
 #
-# When --category names a NEW folder, the matching /categories/<cat>/ page is
-# regenerated automatically (via scripts/gen-categories.sh).
+# When --category names a NEW folder, its /posts/<cat>/ index page is
+# scaffolded automatically (via scripts/gen-categories.nu).
 def main [
   title: string                 # Post title (required)
   --category (-c): string = ""  # Category = sub-folder under content/posts/
@@ -92,10 +92,10 @@ def main [
   mkdir $dir
   ($lines | str join "\n") + "\n" | save --force $file
 
-  # A brand-new category folder needs its /categories/<cat>/ listing page.
+  # A brand-new category folder needs its /posts/<cat>/ index page.
   if $is_new_category {
     print $"New category '($category)' — regenerating category pages..."
-    bash $"($root)/scripts/gen-categories.sh"
+    nu $"($root)/scripts/gen-categories.nu"
   }
 
   let url = if ($category | is-empty) {

@@ -22,7 +22,7 @@ A personal blog built with [Tola SSG](https://github.com/tola-rs/tola-ssg) (v0.7
 ```
 nu scripts/new-post.nu "Understanding Ownership" -c rust -t "rust, memory" -s "A quick tour" --cover /images/foo.avif
 ```
-Flags: `-c/--category` (sub-folder under `content/posts/`), `-a/--author` (default `Justin`), `-s/--summary`, `-t/--tags` (comma-separated → Typst tuple), `--cover` (image URL), `-f/--force` (overwrite). Date is set to today. When `--category` names a **new** folder it auto-runs `gen-categories.sh` so the `/categories/<cat>/` page exists. It omits empty `summary`/`cover` fields on purpose: an empty `summary: []` content block breaks the OG-description `<meta>` tag at build time.
+Flags: `-c/--category` (sub-folder under `content/posts/`), `-a/--author` (default `Justin`), `-s/--summary`, `-t/--tags` (comma-separated → Typst tuple), `--cover` (image URL), `-f/--force` (overwrite). Date is set to today. When `--category` names a **new** folder it auto-runs `gen-categories.nu` so the folder's `/posts/<cat>/` index page exists. It omits empty `summary`/`cover` fields on purpose: an empty `summary: []` content block breaks the OG-description `<meta>` tag at build time.
 
 ## Architecture
 
@@ -38,7 +38,7 @@ templates/base.typ   THE site-wide file. Header/nav/footer (shell), <head> tags 
 templates/post.typ   Post template  — title + date/author/category meta + body.
 templates/page.typ   Plain-page template — title + body (index, about, posts list).
                      Understands a `narrow: true` flag for readable prose width.
-templates/category.typ  Single-category listing — renders a card-grid of its posts.
+templates/category.typ  Category index page (content/posts/<cat>/index.typ) — renders a card-grid of its posts.
 content/**/*.typ     Actual pages. Each applies a template via `#show: <template>.with(...)`.
 ```
 
@@ -76,15 +76,15 @@ Note `summary` is Typst **content** (`[...]`); leave the field out entirely rath
 
 ### Filename → URL mapping
 
-`content/index.typ` → `/`, `content/about.typ` → `/about/`, `content/posts/first.typ` → `/posts/first/`, `content/posts/index.typ` → `/posts/`. Folder-style permalinks with trailing slash.
+`content/index.typ` → `/`, `content/about.typ` → `/about/`, `content/posts/first.typ` → `/posts/first/`, `content/posts/index.typ` → `/posts/`. A category's index page `content/posts/<cat>/index.typ` → `/posts/<cat>/`; `content/categories.typ` → `/categories/`. Folder-style permalinks with trailing slash.
 
-### Categories (post sub-folders → generated listing pages)
+### Categories (post sub-folders → per-folder index pages)
 
-A post's **category** is the folder right after `/posts/`: `content/posts/rust/ownership.typ` → category `rust`. A post directly under `content/posts/` (e.g. `first.typ`) has none. `category-of(permalink)` and `current-category` (in `base.typ`) derive it; `post.typ` shows it as a badge in the meta line.
+A post's **category** is the folder right after `/posts/`: `content/posts/rust/ownership.typ` → category `rust`, served at `/posts/rust/ownership/`. A post directly under `content/posts/` (e.g. `first.typ`) has none. `category-of(permalink)` and `current-category` (in `base.typ`) derive it; `post.typ` shows it as a badge in the meta line.
 
-`/categories/` (`content/categories/index.typ`) lists all categories dynamically. Each `/categories/<cat>/` page is rendered by `templates/category.typ` (`category.with(category:, title:)`) which lists that folder's posts.
+`/categories/` (`content/categories.typ`) lists all categories dynamically. Each category folder has an **index page** `content/posts/<cat>/index.typ` served at `/posts/<cat>/`, rendered by `templates/category.typ` (`category.with(title:, summary:, layout:, cover:)`); it lists that folder's posts and **holds the category's display metadata**. The category name is derived from the folder (permalink), so you don't pass it — `category-info` looks the page up by its `/posts/<cat>/` permalink.
 
-Because Tola has no dynamic routes, each `/categories/<cat>/` needs its own content file. **Do not hand-write these** — `scripts/gen-categories.sh` regenerates one stub per post sub-folder and deletes stale ones (idempotent). It runs in `build.sh` on deploy; run it locally after adding/removing a category folder: `bash scripts/gen-categories.sh` (or just use `scripts/new-post.nu -c <cat>`, which runs it for new folders). The stubs carry an AUTO-GENERATED banner and are committed so `tola serve` works without regenerating.
+Because Tola has no dynamic routes, each category folder needs its `index.typ`. **Do not hand-write these** — `scripts/gen-categories.nu` scaffolds one stub per post sub-folder that lacks one (idempotent; it never overwrites an existing one). Since each index page lives inside its own folder it can't go stale, so there is nothing to prune. It is a **local convenience only** — it is *not* run on deploy, because the index pages are committed hand-edited source: the deploy build reflects exactly what's committed, and a category folder missing its `index.typ` fails the build loudly (broken `/posts/<cat>/` link) rather than silently shipping a placeholder. Run it locally after adding a category folder: `nu scripts/gen-categories.nu` (or just use `scripts/new-post.nu -c <cat>`, which runs it for new folders). The stubs carry an AUTO-GENERATED banner and are committed so `tola serve` works without regenerating.
 
 ### pages() and the two-phase gotcha
 
@@ -102,7 +102,7 @@ Because Tola has no dynamic routes, each `/categories/<cat>/` needs its own cont
 
 Auto-deploys via **Cloudflare Workers Builds** (native Git integration, not GitHub Actions) on every push to `main`:
 - `wrangler.jsonc` — assets-only Worker serving `./public` (no server code).
-- `build.sh` — the Cloudflare build command: downloads the pinned `tola` release binary, runs `scripts/gen-categories.sh`, then `tola build`. Bump `TOLA_VERSION` here (keep in sync with the local `tola --version`).
+- `build.sh` — the Cloudflare build command: downloads the pinned `tola` release binary, then runs `tola build`. Bump `TOLA_VERSION` here (keep in sync with the local `tola --version`).
 - Deploy command is the default `npx wrangler deploy`; Cloudflare runs the build on Ubuntu 24.04 and handles auth.
 
 `public/`, `.tola/` (cache), and a stray `./tola` binary are gitignored — never commit build output.

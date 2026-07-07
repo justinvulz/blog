@@ -2,7 +2,7 @@
 // Used from a post file with:  #show: post.with(title: "...", date: "...", ...)
 
 #import "/templates/tola.typ": wrap-page
-#import "/templates/base.typ": base, head, shell, fmt-date, post-overview, img, columns, current-category
+#import "/templates/base.typ": base, head, shell, fmt-date, post-overview, series-nav, img, columns, current-category
 
 #let post = wrap-page(
   base: base,
@@ -20,6 +20,7 @@
         ]
       }
       #body
+      #series-nav()
     ]
     let overview = post-overview()
     if overview == none {

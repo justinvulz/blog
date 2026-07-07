@@ -5,6 +5,7 @@
 
 #import "@tola/site:0.0.0": info
 #import "@tola/current:0.0.0": current-permalink, headings
+#import "@tola/pages:0.0.0": pages
 #import "/utils/tola.typ": og-tags, to-string
 
 /// Format a date that may be a datetime (from a template) or a plain
@@ -106,6 +107,9 @@
     #post-cover(post)
     #html.elem("div", attrs: (class: "card-body"))[
       #if cat != none { html.elem("div", attrs: (class: "card-cat"))[#cat] }
+      #if post.at("order", default: none) != none {
+        html.elem("div", attrs: (class: "card-part"))[Part #post.order]
+      }
       #html.elem("div", attrs: (class: "card-title"))[#post.title]
       #if post.at("summary", default: none) != none {
         html.elem("div", attrs: (class: "card-excerpt"))[#post.summary]
@@ -122,57 +126,82 @@
   #for p in posts { post-card(p) }
 ]
 
-/// Optional per-category presentation metadata. Keys are category names (the
-/// post sub-folder under /posts/). Categories are derived from folders, so this
-/// dict is the one place to give a category a nicer face. Each value may set:
-///   cover:   image URL for the category card + header (else striped placeholder)
-///   title:   display name (else the capitalized folder name)
-///   summary: short description shown on the card and the category page
-/// Categories missing here still work — they fall back to these defaults.
-#let category-meta = (
-  rust: (
-    summary: [Ownership, lifetimes, and systems-programming notes.],
-    // cover: "/images/rust.avif",
-  ),
-)
+/// A compact ordered "series index" of `posts` (already in reading order).
+/// Each row is a numbered link — the post's `order` if set, else its position,
+/// zero-padded — with the title and date. Good for a tutorial series.
+#let post-list(posts) = html.elem("ol", attrs: (class: "series-index"))[
+  #for (i, p) in posts.enumerate() {
+    let n = p.at("order", default: i + 1)
+    let num = if n < 10 { "0" + str(n) } else { str(n) }
+    html.elem("li")[
+      #html.elem("a", attrs: (class: "series-row", href: p.permalink))[
+        #html.elem("span", attrs: (class: "series-num"))[#num]
+        #html.elem("span", attrs: (class: "series-item-title"))[#p.title]
+        #html.elem("span", attrs: (class: "series-item-date"))[#fmt-date(p.at("date", default: none))]
+      ]
+    ]
+  }
+]
 
-/// Presentation dict for a category (empty if none configured).
-#let category-info(cat) = category-meta.at(cat, default: (:))
+/// Default display title for a category key — capitalize the first letter
+/// (e.g. "rust" -> "Rust"). Real titles are set per-category in
+/// content/posts/<cat>/index.typ via the `title:` field.
+#let cap(name) = if name == "" { name } else { upper(name.first()) + name.slice(1) }
 
-/// Display title for a category: its configured `title`, else the capitalized
-/// folder name (e.g. "rust" -> "Rust").
-#let category-title(cat) = category-info(cat).at(
-  "title",
-  default: upper(cat.first()) + cat.slice(1),
-)
+/// Presentation metadata for a category, read from its /posts/<cat>/ index page
+/// (a normal page in `pages()`), NOT from any dict here. That page sets
+/// `title`/`summary`/`cover`; this looks it up by its permalink `/posts/<cat>/`.
+/// Returns a dict with `title`, `summary`, `cover` (defaults if the page or a
+/// field is missing). During `pages()`'s scan phase everything falls back.
+#let category-info(cat) = {
+  let p = pages().find(p => p.at("permalink", default: none) == "/posts/" + cat + "/")
+  (
+    title: if p != none { p.at("title", default: cap(cat)) } else { cap(cat) },
+    summary: if p != none { p.at("summary", default: none) } else { none },
+    cover: if p != none { p.at("cover", default: none) } else { none },
+  )
+}
 
-/// A post-like card for a single category. `cat` is the folder name and
-/// `count` the number of posts filed under it. Links to /categories/<cat>/.
-#let category-card(cat, count) = {
-  let m = category-info(cat)
-  html.elem("a", attrs: (class: "post-card", href: "/categories/" + cat + "/"))[
+/// Every distinct category (post sub-folder under /posts/) with its post count
+/// and display metadata, alphabetical. `pages()` gives both the posts (for the
+/// count) and the /categories/<cat>/ pages (for title/summary/cover).
+#let category-entries() = {
+  let cats = (pages()
+    .filter(p => p.at("date", default: none) != none)
+    .map(p => category-of(p.permalink))
+    .filter(c => c != none))
+  cats.dedup().sorted().map(name => {
+    let info = category-info(name)
+    (name: name, count: cats.filter(c => c == name).len(), ..info)
+  })
+}
+
+/// A post-like card for a single category `entry` (from `category-entries`).
+/// Links to /posts/<name>/ (that category's index page).
+#let category-card(entry) = {
+  html.elem("a", attrs: (class: "post-card", href: "/posts/" + entry.name + "/"))[
     #cover-block(
-      cover: m.at("cover", default: none),
-      key: cat,
-      label: cat,
-      alt: category-title(cat),
+      cover: entry.at("cover", default: none),
+      key: entry.name,
+      label: entry.name,
+      alt: entry.title,
     )
     #html.elem("div", attrs: (class: "card-body"))[
       #html.elem("div", attrs: (class: "card-cat"))[category]
-      #html.elem("div", attrs: (class: "card-title"))[#category-title(cat)]
-      #if m.at("summary", default: none) != none {
-        html.elem("div", attrs: (class: "card-excerpt"))[#m.summary]
+      #html.elem("div", attrs: (class: "card-title"))[#entry.title]
+      #if entry.at("summary", default: none) != none {
+        html.elem("div", attrs: (class: "card-excerpt"))[#entry.summary]
       }
       #html.elem("div", attrs: (class: "card-date"))[
-        #count #if count == 1 [post] else [posts]
+        #entry.count #if entry.count == 1 [post] else [posts]
       ]
     ]
   ]
 }
 
-/// Wrap a sequence of `(name, count)` category entries in the card grid.
+/// Wrap the `category-entries()` list in the card grid.
 #let category-grid(cats) = html.elem("div", attrs: (class: "card-grid"))[
-  #for c in cats { category-card(c.name, c.count) }
+  #for c in cats { category-card(c) }
 ]
 
 /// Turn heading text into a URL-safe anchor id. ASCII letters/digits are kept,
@@ -217,6 +246,41 @@
         ]
       }
     ]
+  ]
+}
+
+/// Posts in category `cat` that carry an `order`, sorted ascending — i.e. the
+/// posts of a tutorial series in reading sequence. During `pages()`'s scan
+/// phase this is `()`; it fills in during compile (the two-phase gotcha).
+#let series-in(cat) = (pages()
+  .filter(p => category-of(p.permalink) == cat)
+  .filter(p => p.at("order", default: none) != none)
+  .sorted(key: p => p.order))
+
+/// Prev/next navigation within the current post's series (ordered by `order`).
+/// Returns `none` when the post isn't part of an ordered series, so the caller
+/// can skip it for standalone posts.
+#let series-nav() = {
+  if current-category == none { return none }
+  let series = series-in(current-category)
+  let idx = series.position(p => p.permalink == current-permalink)
+  if idx == none { return none }
+  let prev = if idx > 0 { series.at(idx - 1) } else { none }
+  let next = if idx < series.len() - 1 { series.at(idx + 1) } else { none }
+  if prev == none and next == none { return none }
+  html.elem("nav", attrs: (class: "series-nav"))[
+    #if prev != none {
+      html.elem("a", attrs: (class: "series-link series-prev", href: prev.permalink))[
+        #html.elem("span", attrs: (class: "series-nav-label"))[← Previous]
+        #html.elem("span", attrs: (class: "series-nav-title"))[#prev.title]
+      ]
+    } else { html.elem("span") }
+    #if next != none {
+      html.elem("a", attrs: (class: "series-link series-next", href: next.permalink))[
+        #html.elem("span", attrs: (class: "series-nav-label"))[Next →]
+        #html.elem("span", attrs: (class: "series-nav-title"))[#next.title]
+      ]
+    }
   ]
 }
 

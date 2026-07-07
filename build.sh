@@ -9,9 +9,6 @@ TOLA_VERSION="${TOLA_VERSION:-v0.7.1}" # override via a build variable in the CF
 echo "Installing Tola ${TOLA_VERSION}..."
 curl -sSfL "https://github.com/tola-rs/tola-ssg/releases/download/${TOLA_VERSION}/tola-x86_64-linux-static.tar.gz" | tar xz
 
-echo "Generating category pages..."
-bash scripts/gen-categories.sh
-
 echo "Building site..."
 ./tola build
 
