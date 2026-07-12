@@ -6,5 +6,5 @@
   title: "NixOS",
   summary: [A hands-on NixOS tutorial series — practical, beginner-friendly notes.],
   layout: "list", // "grid" (cards) | "list" (ordered series index) | "both"
-  // cover: "/images/nixos.avif",
+  cover: "/images/nixos/nixos_cover.avif",
 )

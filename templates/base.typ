@@ -85,13 +85,37 @@
   }
 }
 
-/// The cover block for a post: its `cover` image if set, otherwise a
-/// deterministic striped placeholder (keyed off the permalink).
+/// Default display title for a category key — capitalize the first letter
+/// (e.g. "rust" -> "Rust"). Real titles are set per-category in
+/// content/posts/<cat>/index.typ via the `title:` field.
+#let cap(name) = if name == "" { name } else { upper(name.first()) + name.slice(1) }
+
+/// Presentation metadata for a category, read from its /posts/<cat>/ index page
+/// (a normal page in `pages()`), NOT from any dict here. That page sets
+/// `title`/`summary`/`cover`; this looks it up by its permalink `/posts/<cat>/`.
+/// Returns a dict with `title`, `summary`, `cover` (defaults if the page or a
+/// field is missing). During `pages()`'s scan phase everything falls back.
+#let category-info(cat) = {
+  let p = pages().find(p => p.at("permalink", default: none) == "/posts/" + cat + "/")
+  (
+    title: if p != none { p.at("title", default: cap(cat)) } else { cap(cat) },
+    summary: if p != none { p.at("summary", default: none) } else { none },
+    cover: if p != none { p.at("cover", default: none) } else { none },
+  )
+}
+
+/// The cover block for a post: its `cover` image if set; otherwise, if the post
+/// is under a category, that category's cover; otherwise a deterministic striped
+/// placeholder (keyed off the permalink).
 /// `post` is a `pages()` entry or a metadata dict.
 #let post-cover(post) = {
   let cat = category-of(post.at("permalink", default: none))
+  let cover = post.at("cover", default: none)
+  if cover == none and cat != none {
+    cover = category-info(cat).cover
+  }
   cover-block(
-    cover: post.at("cover", default: none),
+    cover: cover,
     key: post.at("permalink", default: post.at("title", default: "")),
     label: if cat != none { cat } else { "post" },
     alt: to-string(post.at("title", default: "")),
@@ -142,25 +166,6 @@
     ]
   }
 ]
-
-/// Default display title for a category key — capitalize the first letter
-/// (e.g. "rust" -> "Rust"). Real titles are set per-category in
-/// content/posts/<cat>/index.typ via the `title:` field.
-#let cap(name) = if name == "" { name } else { upper(name.first()) + name.slice(1) }
-
-/// Presentation metadata for a category, read from its /posts/<cat>/ index page
-/// (a normal page in `pages()`), NOT from any dict here. That page sets
-/// `title`/`summary`/`cover`; this looks it up by its permalink `/posts/<cat>/`.
-/// Returns a dict with `title`, `summary`, `cover` (defaults if the page or a
-/// field is missing). During `pages()`'s scan phase everything falls back.
-#let category-info(cat) = {
-  let p = pages().find(p => p.at("permalink", default: none) == "/posts/" + cat + "/")
-  (
-    title: if p != none { p.at("title", default: cap(cat)) } else { cap(cat) },
-    summary: if p != none { p.at("summary", default: none) } else { none },
-    cover: if p != none { p.at("cover", default: none) } else { none },
-  )
-}
 
 /// Every distinct category (post sub-folder under /posts/) with its post count
 /// and display metadata, alphabetical. `pages()` gives both the posts (for the
