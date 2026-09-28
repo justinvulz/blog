@@ -54,13 +54,13 @@
   ),
 )[#for it in items.pos() { html.elem("div")[#it] }]
 
-/// Warm placeholder-cover stripe pairs (from the design). A post with no cover
+/// Placeholder-cover stripe pairs, as CSS variables (themed in main.css). A post with no cover
 /// image gets a deterministic striped block instead, keyed off its permalink.
 #let _cover-stripes = (
-  ("#8c8264", "#b08a76"),
-  ("#9c8a9c", "#8c8264"),
-  ("#b08a76", "#9c8a9c"),
-  ("#8c8264", "#9c8a9c"),
+  ("var(--stripe-1)", "var(--stripe-2)"),
+  ("var(--stripe-3)", "var(--stripe-1)"),
+  ("var(--stripe-2)", "var(--stripe-3)"),
+  ("var(--stripe-1)", "var(--stripe-3)"),
 )
 #let _stripe-for(key) = _cover-stripes.at(
   calc.rem(to-string(key).len(), _cover-stripes.len()),
@@ -209,6 +209,130 @@
   #for c in cats { category-card(c) }
 ]
 
+/// Posts filed under `cat`. Series posts (those with an `order`) come first in
+/// reading sequence, so a tutorial series lists in order; any remaining posts
+/// follow, newest first.
+#let posts-in(cat) = {
+  let all = pages().filter(p => category-of(p.permalink) == cat)
+  let series = all
+    .filter(p => p.at("order", default: none) != none)
+    .sorted(key: p => p.order)
+  let rest = all
+    .filter(p => p.at("order", default: none) == none)
+    .filter(p => p.at("date", default: none) != none)
+    .sorted(key: p => p.date)
+    .rev()
+  series + rest
+}
+
+/// Split a post date (datetime, or a "YYYY-MM-DD" string from `pages()`) into
+/// its year and its "MM-DD" part, both strings.
+#let date-parts(d) = {
+  if type(d) == datetime {
+    (year: str(d.year()), md: d.display("[month]-[day]"))
+  } else {
+    let s = to-string(d)
+    (
+      year: s.slice(0, calc.min(4, s.len())),
+      md: if s.len() >= 10 { s.slice(5, 10) } else { s },
+    )
+  }
+}
+
+/// Home-page intro: a mono shell-prompt line over a large lede (the page's
+/// <h1>) ending in a block cursor.
+#let home-intro(body, prompt: "~/blog $ cat README") = html.elem("section", attrs: (class: "home-intro"))[
+  #html.elem("div", attrs: (class: "home-prompt"))[#prompt]
+  #html.elem("h1", attrs: (class: "home-lede"))[#body#html.elem("span", attrs: (class: "cursor", aria-hidden: "true"))[]]
+]
+
+/// A dated "log" of `posts` (already newest first), grouped under a big year
+/// heading. Each row: MM-DD · category · title (+ summary) · Part N.
+/// `more` is an optional URL shown as "All posts →" beside the first year.
+#let post-log(posts, more: none) = {
+  let years = posts.map(p => date-parts(p.date).year).dedup()
+  html.elem("div", attrs: (class: "post-log"))[
+    #for (i, y) in years.enumerate() {
+      html.elem("div", attrs: (class: "log-year"))[
+        #html.elem("h2", attrs: (class: "log-year-num"))[#y]
+        // Lone links sit in a <div>: next to block siblings Typst would
+        // otherwise wrap them in a <p> (and its prose styles).
+        #if i == 0 and more != none {
+          html.div(class: "log-more")[#html.elem("a", attrs: (href: more))[All posts →]]
+        }
+      ]
+      html.elem("ol", attrs: (class: "log-list"))[
+        #for p in posts.filter(p => date-parts(p.date).year == y) {
+          let cat = category-of(p.permalink)
+          html.elem("li")[
+            #html.elem("a", attrs: (class: "log-row", href: p.permalink))[
+              #html.span(class: "log-date")[#date-parts(p.date).md]
+              #html.span(class: "log-cat")[#if cat != none { cat }]
+              #html.span(class: "log-main")[
+                #html.span(class: "log-title")[#p.title]
+                #if p.at("summary", default: none) != none {
+                  html.span(class: "log-excerpt")[#p.summary]
+                }
+              ]
+              #html.span(class: "log-part")[#if p.at("order", default: none) != none [Part #p.order]]
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+/// Sidebar block spotlighting category `cat`: cover, title, summary, its first
+/// `limit` posts (series order, like the category page) and a link to it.
+#let featured-category(cat, limit: 5) = {
+  let info = category-info(cat)
+  let posts = posts-in(cat)
+  let url = "/posts/" + cat + "/"
+  html.elem("section", attrs: (class: "side-block"))[
+    #html.elem("h2", attrs: (class: "side-label"))[Featured category]
+    #html.div(class: "side-cover")[#html.elem("a", attrs: (href: url))[
+      #cover-block(cover: info.cover, key: cat, label: cat, alt: info.title)
+    ]]
+    #html.elem("div", attrs: (class: "side-title"))[#info.title]
+    #if info.summary != none {
+      html.elem("div", attrs: (class: "side-summary"))[#info.summary]
+    }
+    #if posts.len() > 0 {
+      html.elem("ol", attrs: (class: "side-list"))[
+        #for (i, p) in posts.slice(0, calc.min(posts.len(), limit)).enumerate() {
+          let n = p.at("order", default: i + 1)
+          let num = if n < 10 { "0" + str(n) } else { str(n) }
+          html.elem("li")[
+            #html.elem("a", attrs: (class: "side-row", href: p.permalink))[
+              #html.span(class: "side-num")[#num]
+              #html.span(class: "side-row-title")[#p.title]
+            ]
+          ]
+        }
+      ]
+    }
+    #html.div(class: "side-link")[#html.elem("a", attrs: (href: url))[View the category →]]
+  ]
+}
+
+/// Sidebar list of every category (from `category-entries()`) with its count.
+#let category-list(cats) = if cats.len() > 0 {
+  html.elem("section", attrs: (class: "side-block"))[
+    #html.elem("h2", attrs: (class: "side-label"))[Categories]
+    #html.elem("ul", attrs: (class: "side-cats"))[
+      #for c in cats {
+        html.elem("li")[
+          #html.elem("a", attrs: (class: "side-cat", href: "/posts/" + c.name + "/"))[
+            #html.span[#c.name]
+            #html.span(class: "side-count")[#c.count]
+          ]
+        ]
+      }
+    ]
+  ]
+}
+
 /// Turn heading text into a URL-safe anchor id. ASCII letters/digits are kept,
 /// whitespace/underscores become dashes, punctuation is dropped, and any other
 /// character (e.g. CJK) is kept as-is so those headings still get a usable id.
@@ -327,12 +451,21 @@
   html.header(class: "site-header")[
     #html.div(class: "wrap header-inner")[
       #link("/")[#html.span(class: "site-title")[#info.title#html.span(class: "logo-dot")[.]]]
-      #html.nav(class: "nav-links")[
-        #for item in nav-links {
-          link(item.url)[#html.span(
-            class: if is-active(item.url) { "nav-link active" } else { "nav-link" },
-          )[#item.label]]
-        }
+      // The toggle sits beside <nav>, not in it: Typst treats <button> as a
+      // block, which would wrap the inline nav links in a <p>.
+      #html.div(class: "header-end")[
+        #html.nav(class: "nav-links")[
+          #for item in nav-links {
+            link(item.url)[#html.span(
+              class: if is-active(item.url) { "nav-link active" } else { "nav-link" },
+            )[#item.label]]
+          }
+        ]
+        // Light/dark toggle; wired up by assets/scripts/theme.js.
+        #html.elem(
+          "button",
+          attrs: (class: "theme-toggle", type: "button", aria-label: "Toggle light/dark theme"),
+        )[#html.span(class: "theme-icon")[]]
       ]
     ]
   ]

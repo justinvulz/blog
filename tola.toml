@@ -37,7 +37,7 @@ no_fouc = true
 # CSS stylesheet paths (relative to site root).
 styles = ["assets/styles/main.css"]
 # Script entries (relative to site root).
-scripts = []
+scripts = ["assets/scripts/theme.js"]
 # Raw HTML elements to insert into head.
 # The charset MUST come first: without it the page renders correctly under
 # `tola serve` (which sends a charset=utf-8 HTTP header) but garbles non-ASCII
@@ -45,9 +45,11 @@ scripts = []
 # relied on. Declaring it in the HTML fixes it everywhere.
 elements = [
   '<meta charset="utf-8">',
+  # Apply a saved light/dark choice before first paint (see assets/scripts/theme.js).
+  '<script>try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>',
   '<link rel="preconnect" href="https://fonts.googleapis.com">',
   '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
-  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap">'
+  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Noto+Sans+TC:wght@400..900&display=swap">'
 ]
 
 [build.assets]
@@ -58,7 +60,7 @@ elements = [
 # - `"assets"` -> `/assets/xxx`
 # - `"assets/styles"` -> `/styles/xxx`
 # - `{ dir = "vendor", as = "lib" }` -> `/lib/xxx`
-nested = ["assets/styles", "assets/images"]
+nested = ["assets/styles", "assets/images", "assets/scripts"]
 # Flatten files (copy to output root).
 # Each file is copied directly to `output/{basename}`.
 # Examples:

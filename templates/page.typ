@@ -5,7 +5,8 @@
 #import "/templates/base.typ": base, head, shell, fmt-date, img, columns, card-grid, post-card
 
 // Extra metadata this template understands, beyond the standard fields:
-//   narrow: true  -> constrain to a readable prose width (e.g. the About page).
+//   narrow: true       -> constrain to a readable prose width (e.g. the About page).
+//   show-title: false  -> skip the <h1> title (the page supplies its own, e.g. home).
 #let page = wrap-page(
   base: base,
   head: head,
@@ -13,7 +14,7 @@
     let narrow = meta.at("narrow", default: false)
     shell(
       {
-        if meta.at("title", default: none) != none {
+        if meta.at("title", default: none) != none and meta.at("show-title", default: true) {
           html.h1[#meta.title]
         }
         body

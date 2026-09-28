@@ -44,11 +44,22 @@ content/**/*.typ     Actual pages. Each applies a template via `#show: <template
 
 ### Theme / design
 
-The site uses a dark, warm palette ("nadja.log"-style) in `assets/styles/main.css`, driven
-by CSS custom properties in `:root` — notably `--accent` (currently sage `#7d8a5f`); change
-that one variable to re-tint the whole site. Fonts (**Archivo** + **Space Mono**) load from
-Google Fonts via `[site.header].elements` in `tola.toml`. Listing pages (home, `/posts/`,
-category pages) render posts as a responsive **card grid**; each card shows a cover — the
+The site uses a low-saturation palette in `assets/styles/main.css`, driven by CSS custom
+properties in `:root`, each written once as `light-dark(<light>, <dark>)`: **Paper** (light,
+clay accent `#8e6c5c`) and **Pewter** (dark, lavender accent `#aca6c2`). The theme follows
+the OS setting (`color-scheme: light dark`) unless the header's sun/moon toggle pins
+`<html data-theme="light|dark">`, which flips `color-scheme`. The toggle is wired up by
+`assets/scripts/theme.js` (listed in `[site.header].scripts`, dir in `[build.assets].nested`);
+a one-line inline `<script>` in `[site.header].elements` applies the saved choice
+(`localStorage.theme`) before first paint. Every color is a token (including borders,
+code backgrounds and the placeholder-cover `--stripe-1..3`), so never hard-code a color
+that only works in one theme. Use `--accent` for fills and `--accent-text` for any
+accent-colored text, so it stays ≥4.5:1 in both themes. Fonts (**Archivo** + **Space Mono**, plus
+**Noto Sans TC** for CJK text) load from Google Fonts via `[site.header].elements` in
+`tola.toml`. The home page is a text-first "field log": `home-intro` (prompt line + lede
+`<h1>`), `post-log` (posts grouped under a big year heading), and a sidebar of
+`featured-category` (category of the newest post) + `category-list` — all in `base.typ`.
+`/posts/` and category pages render posts as a responsive **card grid**; each card shows a cover — the
 post's `cover` image if set, otherwise a deterministic striped placeholder keyed off the
 permalink (`post-cover` in `base.typ`). Covers appear only on cards, **not** at the top of
 the post page. `shell(body, content-class:)` sets the content column width — `content`
@@ -71,6 +82,7 @@ Standard metadata fields recognized by Tola: `title, summary, date, update, auth
 Custom fields this repo's templates add (forwarded through `wrap-page`'s `..extra`):
 - `cover:` (posts) — image URL like `/images/foo.avif`; used as the card thumbnail.
 - `narrow: true` (plain pages via `page.typ`) — constrains to a readable prose width (e.g. `about.typ`).
+- `show-title: false` (plain pages via `page.typ`) — skips the automatic `<h1>` title, for a page that renders its own (the home page's `home-intro`).
 
 Note `summary` is Typst **content** (`[...]`); leave the field out entirely rather than passing an empty `[]`, which breaks the OG-description `<meta>` tag.
 
