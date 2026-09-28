@@ -26,7 +26,7 @@ def main [
   # title -> url-safe slug
   let slug = (
     $title
-    | str downcase
+    | str lowercase 
     | str replace --all --regex '[^a-z0-9]+' '-'
     | str trim --char '-'
   )

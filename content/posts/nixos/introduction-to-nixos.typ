@@ -45,3 +45,12 @@ NixOS 可復現的特性與回滾的能力，讓我在設定系統時完全不�
 除了這點外， NixOS 還有很多方便的命令行工具，可以在開發還有測試上有更好地體驗。
 
 
+= 安裝系統
+與一般的系統安裝一樣，前往官網下載 image 並製作 usb 開機碟，
+建議在選擇桌面環境時，可以選擇 No Desktop 。
+以後可以再選擇想要的桌面環境。
+#img("/images/nixos/nixos_install_desktop.avif")
+
+安裝好之後，可以在 `/etc/nixos` 下看到 `configuration.nix` 和 `hardware-configuration.nix`，
+接下來就可以開始設定系統了。
+
